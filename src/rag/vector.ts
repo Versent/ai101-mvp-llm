@@ -13,7 +13,6 @@ export async function put (content: string, reference: string): Promise<void> {
   const contentResult = await pool.query(sql.INSERT_CONTENT, [reference, content, hash])
   const contentId = contentResult.rows[0]?.id
   if (!contentId) {
-    console.warn(`Content with reference "${reference}" already exists.`)
     return
   }
 

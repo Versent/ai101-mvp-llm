@@ -2,9 +2,9 @@ import { CoreMessage, generateText } from 'ai'
 import chalk from 'chalk'
 import { program } from 'commander'
 import ora from 'ora'
-import { getModel } from './src/llm'
-import { prompt } from './src/prompt'
-import { tools } from './src/tools'
+import { getModel } from './src/llm/llm'
+import { prompt } from './src/llm/prompt'
+import { tools } from './src/llm/tools'
 import { tools as ragTools } from './src/rag/tools'
 
 const spinner = ora()
@@ -53,20 +53,23 @@ program
                 tools: { ...tools, ...ragTools },
                 maxSteps: 10,
                 onStepFinish: (step) => {
+                    spinner.stop()
+                    if (step.reasoning) {
+                        console.log(chalk.gray(step.reasoning.trim()))
+                    }
                     step.toolResults.forEach((r) => {
-                        spinner.stop()
-                        console.log(chalk.gray(` > ${r.toolName} (${ JSON.stringify(r.args) }) = ${JSON.stringify(r.result)}`))
-                        spinner.start()
+                        console.log(chalk.gray(` > ${r.toolName} (${JSON.stringify(r.args)}) = ${JSON.stringify(r.result)}`))
                     })
+                    spinner.start()
                 }
             })
             spinner.stop()
-            
+
             // add the result to the messages
             messages.push({ role: 'assistant', content: result.text })
 
             // print the result
-            console.log(result.text)
+            console.log(result.text.trim())
             console.log(chalk.gray(`(took ${Date.now() - start}ms)`))
             console.log()
         }

@@ -24,8 +24,8 @@ graph LR
 
 ## Prerequisites
 
-https://docs.docker.com/compose/install/
-https://ollama.com/
+- https://docs.docker.com/compose/install/
+- https://ollama.com/
 
 ## setup
 
@@ -73,5 +73,21 @@ Excellent tool usage from the following
 ```
 qwen3:0.6b
 qwen3:1.7b
-qwen3:14b-q4_K_M
+qwen3:8b
+qwen3:14b
+```
+
+## Postgres
+
+You can jump into postres with:
+
+```shell
+docker compose exec -it pgvector psql -d embeddings -U admin
+```
+
+And review the content and emeddings with:
+
+```
+SELECT reference FROM content;
+SELECT chunk FROM embeddings;
 ```
