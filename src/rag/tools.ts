@@ -18,11 +18,6 @@ export const tools: ToolSet = {
     execute: async ({ topic, keywords }) => {
       const docs = await get(topic, keywords)
       return JSON.stringify(docs)
-      // return docs.map( (item, idx) => `
-      //   Reference: [${idx}] ${item.reference}
-      //   Similarity: ${item.similarity} (${ item.similarity > 0.5 ? 'relevant' : 'unlikely relevant'})
-      //   Content: ${item.content}
-      // `).join('\n\n')
     }
   }),
 

@@ -1,13 +1,21 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE IF NOT EXISTS embeddings (
+-- Create the content table
+CREATE TABLE IF NOT EXISTS content (
   id SERIAL PRIMARY KEY,
-  embedding VECTOR(768), -- Adjust the dimension as needed
-  embedding_model TEXT,
-  content TEXT,
-  content_hash TEXT,
-  reference TEXT
+  reference TEXT UNIQUE NOT NULL,
+  content TEXT NOT NULL,
+  content_hash TEXT NOT NULL
 );
 
--- https://github.com/pgvector/pgvector-node#:~:text=%5D)%3B-,Add%20an%20approximate%20index,-await%20client.
-CREATE INDEX ON embeddings USING hnsw (embedding vector_l2_ops)
+-- Create the embeddings table
+CREATE TABLE IF NOT EXISTS embeddings (
+  id SERIAL PRIMARY KEY,
+  content_id INT NOT NULL REFERENCES content(id) ON DELETE CASCADE,
+  embedding VECTOR(768), -- Adjust the dimension as needed
+  embedding_model TEXT NOT NULL,
+  chunk TEXT NOT NULL
+);
+
+-- Add an approximate index for embeddings
+CREATE INDEX ON embeddings USING hnsw (embedding vector_l2_ops);

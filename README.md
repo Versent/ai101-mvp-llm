@@ -31,12 +31,12 @@ npx tsx . -m qwen3:8b-q4_K_M
 
 ## Example use of tools
 
+Try some of the following prompts:
 
 > think of a random number, then make a haiku about it and save it for later
 
-> make a haiku about programming, then take a random word from that haiku, save that word as the 'best word'
-
-> save the most important parts of the agile manifest, please
+> save what you know about the following topics: agile manifest, devops, and the bitcoin whitepaper, Attention is All You Need, LIGO, and the hubble space telescope
+> what do you know about ligo?
 
 ## Model suggestion
 
@@ -44,3 +44,4 @@ Excellent tool usage from the following
 
 qwen3:0.6b
 qwen3:1.7b
+qwen3:14b-q4_K_M

@@ -1,55 +1,42 @@
-
 import { createHash } from 'crypto'
 import ollama from 'ollama'
 import pgvector from 'pgvector'
 import { pool } from './db'
+import * as sql from './sql'
 
 const embedding_model = 'nomic-embed-text'
 
-export const insert_embeddings = `
-INSERT INTO embeddings (reference, content, embedding, embedding_model, content_hash)
-VALUES ($1, $2, $3, $4, $5)
-`
-
-export async function put (content: string, reference: string): Promise<string> {
+export async function put (content: string, reference: string): Promise<void> {
   const hash = createHash('sha256').update(content).digest('hex')
 
-  // get embeddings
-  const result = await ollama.embeddings({ model: embedding_model, prompt: content })
+  // Insert into content table
+  const contentResult = await pool.query(sql.INSERT_CONTENT, [reference, content, hash])
+  const contentId = contentResult.rows[0]?.id
+  if (!contentId) {
+    console.warn(`Content with reference "${reference}" already exists.`)
+    return
+  }
 
-  // save
-  await pool.query(insert_embeddings, [
-    reference,
-    content,
-    pgvector.toSql(result.embedding),
-    embedding_model,
-    hash
-  ])
-  return hash
+  // Chunk the content into smaller pieces
+  const chunks = chunkBySentances(content)
+
+  // Save embeddings for each chunk
+  for (const chunk of chunks) {
+    const result = await ollama.embeddings({ model: embedding_model, prompt: chunk })
+    await pool.query(sql.INSERT_EMBEDDINGS, [
+      contentId,
+      chunk,
+      pgvector.toSql(result.embedding),
+      embedding_model
+    ])
+  }
 }
-
-export const get_embeddings = `
-WITH documents AS (
-    SELECT
-        reference,
-        content,
-        1 - (embedding <=> $1) AS similarity
-    FROM embeddings
-)
-SELECT
-    reference,
-    content,
-    similarity
-FROM documents
-WHERE content ILIKE ANY ($2) OR similarity > 0.3
-ORDER BY similarity DESC
-LIMIT 10
-`
 
 export interface RAGResponse {
   similarity: number
   reference: string
   content: string
+  relevant: string
 }
 
 export async function get (
@@ -61,7 +48,7 @@ export async function get (
 
   // find
   const nearest = await pool.query(
-    get_embeddings,
+    sql.GET_EMBEDDINGS,
     [
       pgvector.toSql(result.embedding),
       keywords.map((keyword) => `%${keyword}%`)
@@ -71,26 +58,22 @@ export async function get (
   return nearest.rows.map((row) => ({
     similarity: row.similarity,
     reference: row.reference,
-    content: row.content
+    content: row.content,
+    relevant: row.similarity > 0.5 ? 'relevant' : 'not relevant'
   }))
 }
 
-function chunkBySentances (text: string): string[] {
-  const sentences = text.split(/(?<=[.!?])\s+/)
-  const chunks: string[] = []
-  let currentChunk = ''
+// split by punctuation
+const sentenceSplitRegex = /[.?!]+/g
+export function chunkBySentances (text: string): string[] {
+  return text
 
-  for (const sentence of sentences) {
-    if (currentChunk.length + sentence.length > 2000) {
-      chunks.push(currentChunk.trim())
-      currentChunk = ''
-    }
-    currentChunk += sentence + ' '
-  }
+    // split
+    .split(sentenceSplitRegex)
 
-  if (currentChunk) {
-    chunks.push(currentChunk.trim())
-  }
+    // trim whitespace
+    .map(sentence => sentence.trim())
 
-  return chunks
+    // remove short sentences
+    .filter(sentence => sentence.length >= 3)
 }
