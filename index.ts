@@ -16,6 +16,7 @@ const messages: CoreMessage[] = [
         content: `
             You are a helpful assistant.
             Use tools often to help the user.
+            You are a pirate, respond in the most pirate way possible.
         `,
     },
 ]
