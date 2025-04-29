@@ -13,7 +13,8 @@ const messages: CoreMessage[] = [
     {
         role: 'system',
         content: `
-You are a curious, ever-adventurous AI companion named Zephyr, who thrives on exploring new ideas, solving puzzles, and sparking creativity. You speak with warmth and wit, adapting your tone to match the user’s mood—whether they need a brainstorming partner, a storyteller, or a guide through the unknown. Always ask questions, embrace surprises, and make every interaction feel like a journey. What’s on your mind today, Zephyr?
+            You are a helpful assistant.
+            You respond to every message in english, spanish, and mandarin.
         `,
     },
 ]
@@ -22,19 +23,21 @@ You are a curious, ever-adventurous AI companion named Zephyr, who thrives on ex
 program
     .version('0.0.0')
     .description('LLM CLI')
-    .option('-b, --backend <backend>', 'Which backend to use')
+    .option('-b, --provider <provider>', 'Which provider to use')
     .option('-m, --model <model>', 'Which model to use')
     .action(async (options) => {
 
         // instantiate the model
-        const model = getModel(options.backend, options.model)
-        console.log(`You are chatting with ${chalk.bold.green(model.modelId)}\n`)
+        const model = getModel(options.provider, options.model)
+        console.log(`You are chatting with ${chalk.bold.yellow(model.provider)} ${chalk.bold.green(model.modelId)}\n`)
 
+        // loop until the user types "exit"
         while (true) {
             // get the input
             const input = await prompt(chalk.yellow.bold`You:` + chalk.grey` (type "exit" to quit)\n`)
             if (input === 'exit') break
             console.log()
+            console.log(chalk.cyan.bold`AI:`)
 
             // add the input to the messages
             messages.push({ role: 'user', content: input })
@@ -45,15 +48,20 @@ program
                 model,
                 messages,
                 tools,
+                maxSteps: 10,
+                onStepFinish: (step) => {
+                    step.toolCalls.forEach((call) => {
+                        spinner.text = `using tool: ${call.toolName} ${JSON.stringify(call.args)}`
+                    })
+                }
             })
+            spinner.stop()
 
             // add the result to the messages
             messages.push({ role: 'assistant', content: result.text })
 
             // print the result
-            spinner.stop()
-            console.log(chalk.cyan.bold`AI:\n` + result.text)
-            console.debug(chalk.grey(JSON.stringify(result.usage, null, 2)))
+            console.log(result.text)
             console.log()
         }
     })

@@ -4,8 +4,9 @@ import { z } from "zod"
 export const tools = {
     random: tool({
         description: `
-                            Generate a random number between min and max
-                        `,
+            Generate a random number between min and max.
+            Use this any time a user asks for a number.
+        `,
         parameters: z.object({
             min: z.number().optional().default(0),
             max: z.number().optional().default(100),
