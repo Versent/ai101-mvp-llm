@@ -45,6 +45,7 @@ program
 
             // ask the model
             spinner.start('thinking ...')
+            const start = Date.now()
             const result = await generateText({
                 model,
                 messages,
@@ -59,12 +60,13 @@ program
                 }
             })
             spinner.stop()
-
+            
             // add the result to the messages
             messages.push({ role: 'assistant', content: result.text })
 
             // print the result
             console.log(result.text)
+            console.log(chalk.gray(`(took ${Date.now() - start}ms)`))
             console.log()
         }
     })

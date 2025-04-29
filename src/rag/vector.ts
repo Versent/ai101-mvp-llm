@@ -41,7 +41,7 @@ SELECT
     content,
     similarity
 FROM documents
-WHERE content ILIKE ANY ($2) --OR similarity > 0.5
+WHERE content ILIKE ANY ($2) OR similarity > 0.3
 ORDER BY similarity DESC
 LIMIT 10
 `
@@ -73,4 +73,24 @@ export async function get (
     reference: row.reference,
     content: row.content
   }))
+}
+
+function chunkBySentances (text: string): string[] {
+  const sentences = text.split(/(?<=[.!?])\s+/)
+  const chunks: string[] = []
+  let currentChunk = ''
+
+  for (const sentence of sentences) {
+    if (currentChunk.length + sentence.length > 2000) {
+      chunks.push(currentChunk.trim())
+      currentChunk = ''
+    }
+    currentChunk += sentence + ' '
+  }
+
+  if (currentChunk) {
+    chunks.push(currentChunk.trim())
+  }
+
+  return chunks
 }
