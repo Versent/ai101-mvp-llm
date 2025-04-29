@@ -36,6 +36,7 @@ export interface RAGResponse {
   reference: string
   content: string
   relevant: string
+  keyword_match: boolean
 }
 
 export async function get (
@@ -58,7 +59,8 @@ export async function get (
     similarity: row.similarity,
     reference: row.reference,
     content: row.content,
-    relevant: row.similarity > 0.5 ? 'relevant' : 'not relevant'
+    relevant: row.similarity > 0.5 ? 'relevant' : 'not relevant',
+    keyword_match: row.keyword_match,
   }))
 }
 

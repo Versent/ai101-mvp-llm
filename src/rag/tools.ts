@@ -7,7 +7,7 @@ export const tools: ToolSet = {
 
   search: tool({
     description: `
-      Search for a document, quote, or any piece of information
+      Search for a document, quote, or any piece of information.
       Example: "Search for any info about the weather"
       Example: "Do we have any documents about the Bob or Alice?"
     `,
