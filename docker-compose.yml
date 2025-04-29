@@ -1,0 +1,32 @@
+services:
+
+  ollama:
+    profiles: ['ollama']
+    image: ollama/ollama:0.6.2
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"] # Uncomment this line if GPU support is available
+    volumes:
+      - ollama:/root/.ollama
+
+  # pgvector is just postgres with pgvector extension
+  # https://github.com/pgvector/pgvector/blob/master/Dockerfile
+  pgvector:
+    image: ankane/pgvector:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: embeddings
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+
+volumes:
+  ollama:
+  pgvector_data:

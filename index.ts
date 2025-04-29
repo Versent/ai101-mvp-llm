@@ -5,8 +5,9 @@ import ora from 'ora'
 import { getModel } from './src/llm'
 import { prompt } from './src/prompt'
 import { tools } from './src/tools'
+import { tools as ragTools } from './src/rag/tools'
 
-const spinner = ora({ text: 'Thinking ...', color: 'cyan' })
+const spinner = ora()
 
 // keep an array of message history
 const messages: CoreMessage[] = [
@@ -14,7 +15,7 @@ const messages: CoreMessage[] = [
         role: 'system',
         content: `
             You are a helpful assistant.
-            You respond to every message in english, spanish, and mandarin.
+            Use tools often to help the user.
         `,
     },
 ]
@@ -43,15 +44,17 @@ program
             messages.push({ role: 'user', content: input })
 
             // ask the model
-            spinner.start()
+            spinner.start('thinking ...')
             const result = await generateText({
                 model,
                 messages,
-                tools,
+                tools: { ...tools, ...ragTools },
                 maxSteps: 10,
                 onStepFinish: (step) => {
-                    step.toolCalls.forEach((call) => {
-                        spinner.text = `using tool: ${call.toolName} ${JSON.stringify(call.args)}`
+                    step.toolResults.forEach((r) => {
+                        spinner.stop()
+                        console.log(chalk.gray(` > ${r.toolName} (${ JSON.stringify(r.args) }) = ${JSON.stringify(r.result)}`))
+                        spinner.start()
                     })
                 }
             })

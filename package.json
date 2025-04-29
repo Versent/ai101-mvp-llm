@@ -11,8 +11,11 @@
     "ai": "^4.3.10",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
+    "ollama": "^0.5.15",
     "ollama-ai-provider": "^1.2.0",
-    "ora": "^8.2.0"
+    "ora": "^8.2.0",
+    "pg": "^8.15.6",
+    "pgvector": "^0.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
