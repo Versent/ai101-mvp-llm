@@ -2,7 +2,8 @@
   "name": "llm-mvp",
   "version": "1.0.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "tsx .",
+    "test": "tsx ./evaluate.ts"
   },
   "author": "",
   "license": "ISC",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^22.15.3",
     "@types/pg": "^8.11.14",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
 }

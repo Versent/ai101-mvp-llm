@@ -28,6 +28,12 @@ setup:
 		echo "$(YELLOW).env file already exists. Skipping...$(RESET)"; \
 	fi
 
+run:
+	npm run start
+
+test:
+	npm run test
+
 up: setup
 	@echo "$(CYAN)Starting services with $(PROFILE) profile...$(RESET)"
 	docker compose --profile $(PROFILE) up -d --build
