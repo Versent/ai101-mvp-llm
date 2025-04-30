@@ -1,0 +1,19 @@
+# pgvector is just postgres with pgvector extension
+# https://github.com/pgvector/pgvector/blob/master/Dockerfile
+services:
+  pgvector:
+    image: ankane/pgvector:latest
+    container_name: pgvector
+    ports:
+      - "5432:5432"
+    networks: ["ai101"]
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: embeddings
+    volumes:
+      - pgvector_storage:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+
+volumes:
+  pgvector_storage:

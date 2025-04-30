@@ -5,6 +5,7 @@ The goal of this repo is to demonstrate how approachable it can be to include LL
 This is for app devs who might be familiar with NodeJS and Postgres, but unsure where to begin regarding LLM's.
 
 Here are some parts of the app that you should know:
+
 - My code: some NodeJS code to handle user input and output
 - SDK: the interface into the generative AI models, including tool use (this demo uses Vercel)
 - Provider: the thing which runs the model (this demo uses Ollama)
@@ -27,15 +28,15 @@ graph LR
 - https://docs.docker.com/compose/install/
 - https://ollama.com/
 
-## setup
+## Setup
 
-Start Postgres:
+Create the docker compose stack:
 
 ```sh
-docker compose up -d
+make up
 ```
 
-Install dependancies:
+Install dependencies:
 
 ```sh
 npm i
@@ -47,10 +48,10 @@ npm i
 npx tsx .
 ```
 
-Optionally include a model:
+Optionally specify a model to query:
 
 ```sh
-npx tsx . -m qwen3:8b-q4_K_M 
+npx tsx . -m qwen3:8b-q4_K_M
 ```
 
 ## Example use of tools
@@ -76,6 +77,8 @@ qwen3:1.7b
 qwen3:8b
 qwen3:14b
 ```
+
+_Note:_ Usage of a new model requires pulling that new model to the `ollama-pull` service in the `compose/ollama.yml` file. e.g. `ollama pull qwen3:1.7b`.
 
 ## Postgres
 

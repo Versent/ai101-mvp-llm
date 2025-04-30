@@ -1,0 +1,7 @@
+networks:
+  ai101:
+    name: ai101
+
+include:
+  - compose/ollama.yml
+  - compose/pgvector.yml
