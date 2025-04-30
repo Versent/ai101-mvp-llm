@@ -1,15 +1,23 @@
 import { CoreMessage, generateText } from 'ai'
 import chalk from 'chalk'
 import { program } from 'commander'
+import { createInterface } from 'node:readline/promises'
 import ora from 'ora'
 import { getModel } from './src/llm/llm'
-import { prompt } from './src/llm/prompt'
 import { tools } from './src/llm/tools'
 import { tools as ragTools } from './src/rag/tools'
 
+// spinner for visual interest while waiting for the model
 const spinner = ora()
 
-// keep an array of message history
+// create a readline interface for collecting user input
+const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: true,
+})
+
+// message history keeps track of the conversation
 const messages: CoreMessage[] = [
     {
         role: 'system',
@@ -35,7 +43,7 @@ program
         // loop until the user types "exit"
         while (true) {
             // get the input
-            const input = await prompt(chalk.yellow.bold`You:` + chalk.grey` (type "exit" to quit)\n`)
+            const input = await rl.question(chalk.yellow.bold`You:` + chalk.grey` (type "exit" to quit)\n`)
             if (input === 'exit') break
             console.log()
             console.log(chalk.cyan.bold`AI:`)
