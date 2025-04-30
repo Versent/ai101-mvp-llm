@@ -107,7 +107,7 @@ Below is the data and context which for you to evaluate the assistant's output
 
 async function run() {
 
-    console.log(`Evaluating with ${ verifierModel.provider } ${ chalk.magenta(verifierModel.modelId) }`)
+    console.log(`Evaluating with ${ verifierModel.provider } ${ chalk.magenta(verifierModel.modelId) }\n`)
 
     // run each model
     for (const model of models) {

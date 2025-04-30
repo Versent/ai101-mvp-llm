@@ -26,7 +26,7 @@ graph LR
 ## Prerequisites
 
 - https://docs.docker.com/compose/install/
-- https://ollama.com/
+- https://ollama.com/ (or you can use Docker)
 
 ## Setup
 
@@ -34,6 +34,14 @@ Create the docker compose stack:
 
 ```sh
 make up
+```
+
+If you want to run Ollama inside Docker (a perfectly good option, but often better value to install it).
+Review `./compose/ollama.yml` for available profiles — example:
+
+```sh
+PROFILE=cpu make up
+PROFILE=gpu-nvidia make up
 ```
 
 Install dependencies:
