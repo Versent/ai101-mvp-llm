@@ -1,7 +1,7 @@
 .PHONY: up down restart clean logs ps pull setup prune
 
-# Default to CPU profile (most compatible)
-PROFILE ?= cpu
+# Default to no profile (eg. install ollama on your laptop)
+PROFILE ?= ""
 
 # Colors for pretty output
 CYAN := \033[36m
