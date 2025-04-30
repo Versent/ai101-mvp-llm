@@ -52,24 +52,24 @@ const debugLogPath = path.join(outputDir, `${Date.now()}.log`)
 // tests for each model to run
 interface Test {
     input: string
-    output: string
+    assess: string
     toolsUsed: string[]
 }
 const tests: Test[] = [
     {
         input: 'What is the capital of France?',
-        output: 'The capital of France is Paris.',
+        assess: 'This trivial fact does not need tools, the output should include The capital of France is Paris.',
         toolsUsed: [],
     },
     {
         input: 'give a random number between a million and five billion',
-        output: 'the assistant uses the random tool to return a random number between 1,000,000 and 5,000,000,000',
+        assess: 'the assistant uses the random tool to return a random number between 1,000,000 and 5,000,000,000',
         toolsUsed: ['random'],
     },
     // TODO: automatic database setup — currently you have to put some data in there
     {
         input: 'what do you know about agile?',
-        output: 'search tool yeilds a result about the agile manifesto',
+        assess: 'search tool yeilds a result about the agile manifesto',
         toolsUsed: ['search'],
     },
 ]
@@ -91,11 +91,12 @@ You should check two things:
 
 Score the Assistant Output, giving one point for each of the following:
 
-- an output was produced
-- the right tool was used
-- the system prompt was followed
-- the output is relevant and concise
-- the response was within the expected time (under 20 seconds)
+- an output was produced (1 point)
+- the right tool was used (1 point)
+- no extra tools were used (1 point)
+- the system prompt was followed (1 point)
+- the output is relevant and concise (1 point)
+- the execution time was under 10 seconds (1 point)
 
 # Context to evaluate
 
@@ -168,19 +169,29 @@ async function assert(model: LanguageModel, test: Test) {
     spinner.start(`Evaluating ...`)
     const prompt = `
         ## System Prompt
+        """
         ${SYSTEM_MESSAGE}
+        """
 
         ## User Input
+        """
         ${test.input}
+        """
 
-        ## Desired Output (curated by our human test team)
-        ${test.output}
+        ## Recommendations to Assess (curated by our human test team)
+        """
+        ${test.assess}
+        """
 
         ## Actual Assistant Output
+        """
         ${text || 'no output'}
+        """
 
         ## Assistant Error
+        """
         ${error?.message || 'no errors'}
+        """
         
         ## Tools Suggested (curated by our human test team)
         [${test.toolsUsed.join(', ')}]
@@ -188,7 +199,7 @@ async function assert(model: LanguageModel, test: Test) {
         ## Tools Used
         [${toolsUsed.join(', ')}]
 
-        ## Execution Duration
+        ## Execution Duration (milliseconds)
         ${duration}ms
     `
     const review = await generateObject({
