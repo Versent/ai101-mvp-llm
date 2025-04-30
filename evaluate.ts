@@ -7,24 +7,47 @@ import { tools } from './src/llm/tools'
 import { tools as ragTools } from './src/rag/tools'
 import { openai } from '@ai-sdk/openai'
 import { thinkWrap } from './src/llm/llm'
+import fs from 'fs'
+import path from 'path'
 
 const spinner = ora()
 
-// const verifierModel = openai('gpt-4.1-nano-2025-04-14')
-const verifierModel = ollama('gemma3:12b')
+// the model to use for verification
+// the better the model, the better results
+// I have found only the foundation models are worth your time
+const verifierModel = process.env.OPENAI_API_KEY ? 
+    openai('gpt-4.1-nano-2025-04-14') : ollama('qwen2.5-coder:0.5b')
 
 // a list of models to test
 const models: LanguageModel[] = [
     openai('gpt-4.1-nano-2025-04-14'),
+    // ollama('mistral:7b-instruct'),
+    // ollama('mistral:7b-instruct-q2_K'),
     thinkWrap(ollama('qwen3:0.6b')),
     thinkWrap(ollama('qwen3:1.7b')),
     thinkWrap(ollama('qwen3:8b')),
     thinkWrap(ollama('qwen3:14b')),
-    ollama('llama3.2:1b'),
-    ollama('llama3.2:1b-instruct-q2_K'),
-    ollama('llama3.2:3b'),
-    ollama('llama3.2:3b-instruct-q2_K'),
+    thinkWrap(ollama('qwen3:30b')),
+    thinkWrap(ollama('qwen2.5-coder:0.5b')),
+    thinkWrap(ollama('qwen2.5-coder:7b')),
+
+    // phi4 doesn't work for me
+    // ollama('phi4:14b'),
+    // ollama('phi4:14b-q4_K_M'),
+
+    // llama is no good at tools!
+    // ollama('llama3.2:1b'),
+    // ollama('llama3.2:1b-instruct-q2_K'),
+    // ollama('llama3.2:3b'),
+    // ollama('llama3.2:3b-instruct-q2_K'),
 ]
+
+// debug log
+const outputDir = path.resolve(__dirname, 'results')
+if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir)
+}
+const debugLogPath = path.join(outputDir, `${Date.now()}.log`)
 
 // tests for each model to run
 interface Test {
@@ -52,11 +75,37 @@ const tests: Test[] = [
 ]
 
 const SYSTEM_MESSAGE = `
-    You are a helpful assistant.
-    Use tools often to help the user.
+You are a helpful assistant.
+Use tools often to help the user.
+`
+
+const EVALUTION_INSTRUCTIONS = `
+# Instructions
+Your role is to evaluate the output of an Assistant AI
+
+You should check two things:
+1. The assistant did what the user asks, and follows the system prompt.
+2. The right tools were used, and no extra tools were used.
+
+# Score
+
+Score the Assistant Output, giving one point for each of the following:
+
+- an output was produced
+- the right tool was used
+- the system prompt was followed
+- the output is relevant and concise
+- the response was within the expected time (under 20 seconds)
+
+# Context to evaluate
+
+Below is the data and context which for you to evaluate the assistant's output
+
 `
 
 async function run() {
+
+    console.log(`Evaluating with ${ verifierModel.provider } ${ chalk.magenta(verifierModel.modelId) }`)
 
     // run each model
     for (const model of models) {
@@ -106,7 +155,7 @@ async function assert(model: LanguageModel, test: Test) {
             (" ") +
             (result.text.length > 100 ? result.text.slice(0, 100) + '...' : result.text).replaceAll('\n', '') +
             (chalk.cyan(` ${ Math.round( duration ) }ms`)) +
-            (chalk.gray(` ${toolsUsed.join(', ')}`))
+            (chalk.gray(` [${toolsUsed.join(', ')}]`))
         ))
 
         text = result.text
@@ -116,79 +165,41 @@ async function assert(model: LanguageModel, test: Test) {
     }
     
     // check the result
-    spinner.start(`Verifying ...`)
+    spinner.start(`Evaluating ...`)
+    const prompt = `
+        ## System Prompt
+        ${SYSTEM_MESSAGE}
+
+        ## User Input
+        ${test.input}
+
+        ## Desired Output (curated by our human test team)
+        ${test.output}
+
+        ## Actual Assistant Output
+        ${text || 'no output'}
+
+        ## Assistant Error
+        ${error?.message || 'no errors'}
+        
+        ## Tools Suggested (curated by our human test team)
+        [${test.toolsUsed.join(', ')}]
+
+        ## Tools Used
+        [${toolsUsed.join(', ')}]
+
+        ## Execution Duration
+        ${duration}ms
+    `
     const review = await generateObject({
         model: verifierModel,
-        prompt: `
-            Your role is to verify that the results of an LLM are correct.
-
-            You should check two things:
-            1. The assistant did what the user asks, and follows the system prompt.
-            2. The right tools were used, and no extra tools were used.
-            
-            Additionally, rate the quality of the output from 1 to 5 (like a star rating), one point for each of the following:
-            - an output was produced
-            - the right tool was used
-            - the system prompt was followed
-            - the output is relevant and concise
-            - the response was within the expected time (under 20 seconds)
-
-            Example results:
-            {
-                pass: true,
-                reason: 'followed instruction, used the right tool',
-                quality: 5
-            }
-            {
-                pass: false,
-                reason: 'assistant resulted in error',
-                quality: 0
-            }
-            {
-                pass: true,
-                reason: 'right tool used, but too many times, and otherwise followed instruction',
-                quality: 3
-            }
-            {
-                pass: true,
-                reason: 'wrong tool used, but otherwise followed instruction',
-                quality: 3
-            }
-            {
-                pass: true,
-                reason: 'right tool, good answer, but took too long',
-                quality: 4
-            }
-            
-            System Prompt:
-            ${SYSTEM_MESSAGE}
-
-            User Input:
-            ${test.input}
-
-            Assistant Output:
-            ${text || 'no output'}
-
-            Assistant Error:
-            ${error?.message || 'no errors'}
-
-            Desired Output:
-            ${test.output}
-
-            Tools used:
-            ${toolsUsed.join(', ')}
-            
-            Tools wanted:
-            ${test.toolsUsed.join(', ')}
-
-            Duration:
-            ${duration}ms
-        `,
+        prompt: EVALUTION_INSTRUCTIONS + prompt,
         schema: z.object({
             pass: z.boolean().describe('pass or fail'),
-            reason: z.string().describe('very brief summary for your decision, no more than 10 words'),
-            quality: z.number().min(0).max(5).describe('a rating of 1 to 5 representing the quality of the output'),
-        })
+            reason: z.string().describe('brief summary for your decision, or the reason it did not pass, limit to 2 reasons and 10 words. No fluff, no adjectives.'),
+            points: z.number().min(0).describe('points scored'),
+        }),
+        temperature: 0,
     })
 
     // check the result
@@ -196,8 +207,12 @@ async function assert(model: LanguageModel, test: Test) {
     console.log(
         (" ") +
         (review.object.pass ? "✅" : "❌") +
-        (chalk.yellow(` ${ Math.round( review.object.quality ) }/5`)) +
-        (chalk.gray(` ${review.object.reason}`))
+        (chalk.yellow(` ${ review.object.points }pts`)) +
+        (chalk.gray(` ${review.object.reason}`)) +
+        ( error ? chalk.red(` ${error.message.slice(0, 50)}...`) : "" )
     )
+
+    // write a debug entry
+    fs.appendFileSync(debugLogPath, JSON.stringify({ prompt, review: review.object }, null, 2) + '\n', 'utf-8')
     
 }
