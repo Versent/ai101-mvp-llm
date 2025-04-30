@@ -17,9 +17,6 @@ help:
 	@echo "  make down            - Stop all services"
 	@echo "  make restart         - Restart all services"
 	@echo "  make clean           - Remove orphaned containers and volumes"
-	@echo "  make logs            - View logs from all services"
-	@echo "  make ps              - List running services"
-	@echo "  make pull            - Pull latest images"
 	@echo "  make prune           - Remove all unused Docker data to free disk space"
 
 setup:
