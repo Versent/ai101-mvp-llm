@@ -92,6 +92,7 @@ You should check two things:
 Score the Assistant Output, giving one point for each of the following:
 
 - an output was produced (1 point)
+- no errors were produced (1 point)
 - the right tool was used (1 point)
 - no extra tools were used (1 point)
 - the system prompt was followed (1 point)
