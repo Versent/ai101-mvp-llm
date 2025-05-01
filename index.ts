@@ -8,7 +8,9 @@ import { tools } from './src/llm/tools'
 import { tools as ragTools } from './src/rag/tools'
 
 // spinner for visual interest while waiting for the model
-const spinner = ora()
+const spinner = ora({
+    isSilent: true, // TODO: out of nowhere this stopped working, so i disabled it here as it crashes the program
+})
 
 // create a readline interface for collecting user input
 const rl = createInterface({
