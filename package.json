@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^22.15.3",
     "@types/pg": "^8.11.14",
+    "dedent": "^1.6.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }

@@ -1,14 +1,16 @@
+import { openai } from '@ai-sdk/openai'
 import { generateObject, generateText, LanguageModel } from 'ai'
 import chalk from 'chalk'
+import dedent from 'dedent'
+import fs from 'fs'
 import { ollama } from 'ollama-ai-provider'
 import ora from 'ora'
+import path from 'path'
 import z from 'zod'
+import { SYSTEM_MESSAGE } from '.'
+import { thinkWrap } from './src/llm/llm'
 import { tools } from './src/llm/tools'
 import { tools as ragTools } from './src/rag/tools'
-import { openai } from '@ai-sdk/openai'
-import { thinkWrap } from './src/llm/llm'
-import fs from 'fs'
-import path from 'path'
 
 const spinner = ora()
 
@@ -20,16 +22,22 @@ const verifierModel = process.env.OPENAI_API_KEY ?
 
 // a list of models to test
 const models: LanguageModel[] = [
+
+    // openai is the best at following instructions, using tools, and being fast
     openai('gpt-4.1-nano-2025-04-14'),
-    // ollama('mistral:7b-instruct'),
-    // ollama('mistral:7b-instruct-q2_K'),
+
+    // QWEN is great
     thinkWrap(ollama('qwen3:0.6b')),
     thinkWrap(ollama('qwen3:1.7b')),
     thinkWrap(ollama('qwen3:8b')),
-    thinkWrap(ollama('qwen3:14b')),
-    thinkWrap(ollama('qwen3:30b')),
+    // thinkWrap(ollama('qwen3:14b')),
+    // thinkWrap(ollama('qwen3:30b')),
     thinkWrap(ollama('qwen2.5-coder:0.5b')),
     thinkWrap(ollama('qwen2.5-coder:7b')),
+
+    // mistral fails to use tools, even though it advertises it does
+    // ollama('mistral:7b-instruct'),
+    // ollama('mistral:7b-instruct-q2_K'),
 
     // phi4 doesn't work for me
     // ollama('phi4:14b'),
@@ -47,7 +55,15 @@ const outputDir = path.resolve(__dirname, 'results')
 if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir)
 }
-const debugLogPath = path.join(outputDir, `${Date.now()}.log`)
+const debugLogPath = path.join(outputDir, `${Date.now()}.md`)
+fs.appendFileSync(debugLogPath,
+    `# Evaluation Log\n` +
+    `Run at: ${new Date().toISOString()}\n` +
+    `Evaluated by: ${verifierModel.provider} ${verifierModel.modelId}\n` +
+    `Evaluated models: ${models.map((m) => `${m.provider} ${m.modelId}`).join(', ')}\n` +
+    `# System Prompt\n` +
+    `${SYSTEM_MESSAGE}\n`
+)
 
 // tests for each model to run
 interface Test {
@@ -56,6 +72,11 @@ interface Test {
     toolsUsed: string[]
 }
 const tests: Test[] = [
+    {
+        input: 'Who do you work for?',
+        assess: 'This is a simple question about our company can be answered from the system prompt. The output should include Versent and some history.',
+        toolsUsed: [],
+    },
     {
         input: 'What is the capital of France?',
         assess: 'This trivial fact does not need tools, the output should include The capital of France is Paris.',
@@ -74,10 +95,23 @@ const tests: Test[] = [
     },
 ]
 
-const SYSTEM_MESSAGE = `
-You are a helpful assistant.
-Use tools often to help the user.
-`
+interface Result {
+    model: LanguageModel
+    test: Test
+    result: {
+        text: string
+        error: any
+        duration: number
+        toolsUsed: string[]
+    }
+    review: {
+        pass: boolean
+        reason: string
+        points: number
+    }
+}
+
+const results: Result[] = []
 
 const EVALUTION_INSTRUCTIONS = `
 # Instructions
@@ -99,6 +133,13 @@ Score the Assistant Output, giving one point for each of the following:
 - the output is relevant and concise (1 point)
 - the execution time was under 10 seconds (1 point)
 
+# Tool evaluation
+
+Be sure to review the string array, it is a comma separated list of tool names.
+
+Example: [] means the assistant did not use any tools.
+Example: [random, random, search] means the assistant used the random tool twice, and the search tool once.
+
 # Context to evaluate
 
 Below is the data and context which for you to evaluate the assistant's output
@@ -115,17 +156,40 @@ async function run() {
         // run each test
         console.log(`${model.provider} ${ chalk.bold(model.modelId) }`)
         for (const test of tests) {
-            await assert(model, test)
+            const result = await assert(model, test)
+            results.push(result)
         }
         console.log()
 
     }
 
+    // print the results
+    console.log(chalk.gray('----------- Test Complete -----------'))
+    console.log(chalk.gray(`Debug log: ${debugLogPath}\n`))
+    
+    // rank the models, sorted by points
+    console.log(chalk.bold.blue('Ranking:'))
+    const scores = results
+        .reduce((acc, result) => {
+            if (!acc[result.model.modelId]) {
+                acc[result.model.modelId] = {
+                    model: result.model.modelId,
+                    score: 0,
+                }
+            }
+            acc[result.model.modelId].score += result.review.points
+            return acc
+        }, {} as Record<string, { model: string, score: number }>)
+    Object.values(scores)
+        .sort((a, b) => b.score - a.score)
+        .forEach((result) => {
+            console.log( chalk.yellow(`${result.score}pts `) + result.model )
+        })
 }
 
 run()
 
-async function assert(model: LanguageModel, test: Test) {
+async function assert(model: LanguageModel, test: Test): Promise<Result> {
 
     // run the test
     let text: string = ''
@@ -168,12 +232,7 @@ async function assert(model: LanguageModel, test: Test) {
     
     // check the result
     spinner.start(`Evaluating ...`)
-    const prompt = `
-        ## System Prompt
-        """
-        ${SYSTEM_MESSAGE}
-        """
-
+    const input = dedent`
         ## User Input
         """
         ${test.input}
@@ -205,7 +264,16 @@ async function assert(model: LanguageModel, test: Test) {
     `
     const review = await generateObject({
         model: verifierModel,
-        prompt: EVALUTION_INSTRUCTIONS + prompt,
+        prompt:
+            EVALUTION_INSTRUCTIONS +
+            dedent`
+                ## System Prompt
+                """
+                ${SYSTEM_MESSAGE}
+                """
+
+            ` +
+            input,
         schema: z.object({
             pass: z.boolean().describe('pass or fail'),
             reason: z.string().describe('brief summary for your decision, or the reason it did not pass, limit to 2 reasons and 10 words. No fluff, no adjectives.'),
@@ -225,6 +293,33 @@ async function assert(model: LanguageModel, test: Test) {
     )
 
     // write a debug entry
-    fs.appendFileSync(debugLogPath, JSON.stringify({ prompt, review: review.object }, null, 2) + '\n', 'utf-8')
+    fs.appendFileSync(debugLogPath,
+        `\n# Evaluted Model\n` +
+        `\nProvider: ${model.provider}` +
+        `\nModel ID: ${model.modelId}` +
+        `\n\n# Evaluation Input\n` +
+        input +
+        `\n\n# Evaluation Output\n` +
+        `\nResult: ${review.object.pass ? "Pass ✅" : "Fail ❌"}`+
+        `\nScore:  ${review.object.points} pts` +
+        `\nReason: ${review.object.reason}`
+    )
+
+    // save the result
+    return {
+        model,
+        test,
+        result: {
+            text,
+            error,
+            duration,
+            toolsUsed,
+        },
+        review: {
+            pass: review.object.pass,
+            reason: review.object.reason,
+            points: review.object.points,
+        }
+    }
     
 }
