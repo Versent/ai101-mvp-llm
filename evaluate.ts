@@ -117,28 +117,15 @@ const EVALUTION_INSTRUCTIONS = `
 # Instructions
 Your role is to evaluate the output of an Assistant AI
 
-You should check two things:
-1. The assistant did what the user asks, and follows the system prompt.
-2. The right tools were used, and no extra tools were used.
-
 # Score
 
 Score the Assistant Output, giving one point for each of the following:
 
 - an output was produced (1 point)
 - no errors were produced (1 point)
-- the right tool was used (1 point)
-- no extra tools were used (1 point)
 - the system prompt was followed (1 point)
 - the output is relevant and concise (1 point)
 - the execution time was under 10 seconds (1 point)
-
-# Tool evaluation
-
-Be sure to review the string array, it is a comma separated list of tool names.
-
-Example: [] means the assistant did not use any tools.
-Example: [random, random, search] means the assistant used the random tool twice, and the search tool once.
 
 # Context to evaluate
 
@@ -252,12 +239,6 @@ async function assert(model: LanguageModel, test: Test): Promise<Result> {
         """
         ${error?.message || 'no errors'}
         """
-        
-        ## Tools Suggested (curated by our human test team)
-        [${test.toolsUsed.join(', ')}]
-
-        ## Tools Used
-        [${toolsUsed.join(', ')}]
 
         ## Execution Duration (milliseconds)
         ${duration}ms
@@ -267,7 +248,7 @@ async function assert(model: LanguageModel, test: Test): Promise<Result> {
         prompt:
             EVALUTION_INSTRUCTIONS +
             dedent`
-                ## System Prompt
+                ## Assistant System Prompt
                 """
                 ${SYSTEM_MESSAGE}
                 """
@@ -282,15 +263,33 @@ async function assert(model: LanguageModel, test: Test): Promise<Result> {
         temperature: 0,
     })
 
+    // codify the tool check by comparing the tools used to the tools suggested
+    // +1 point for each correct tool used, and -1 point for each incorrect tool used
+    const wantCopy = test.toolsUsed.slice()
+    const gotCopy = toolsUsed.slice()
+    let toolScore = 0
+    for (let i = 0; i < wantCopy.length; i++) {
+        const tool = wantCopy[i]
+        if (gotCopy.includes(tool)) {
+            // tool hit, remove it from both lists
+            wantCopy.splice(i, 1)
+            gotCopy.splice(gotCopy.indexOf(tool), 1)
+            toolScore++
+        }
+    }
+    toolScore = toolScore - wantCopy.length - gotCopy.length
+
     // check the result
     spinner.stop()
     console.log(
         (" ") +
         (review.object.pass ? "✅" : "❌") +
         (chalk.yellow(` ${ review.object.points }pts`)) +
+        ( toolScore == 0 ? "" : " (" + (toolScore > 0 ? chalk.green(`+${toolScore}`) : chalk.red(`${toolScore}`)) + ")") +
         (chalk.gray(` ${review.object.reason}`)) +
         ( error ? chalk.red(` ${error.message.slice(0, 50)}...`) : "" )
     )
+    review.object.points += toolScore
 
     // write a debug entry
     fs.appendFileSync(debugLogPath,
