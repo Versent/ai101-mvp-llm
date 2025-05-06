@@ -10,6 +10,7 @@ export const tools: ToolSet = {
       Search for a document, quote, or any piece of information.
       Example: "Search for any info about the weather"
       Example: "Do we have any documents about the Bob or Alice?"
+      Example: "What do you know about blah?"
     `,
     parameters: z.object({
       topic: z.string().describe('the general topic to search for'),
