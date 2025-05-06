@@ -1,3 +1,4 @@
+import { openai } from '@ai-sdk/openai';
 import { extractReasoningMiddleware, LanguageModel, wrapLanguageModel } from 'ai';
 import { ollama } from 'ollama-ai-provider';
 
@@ -8,6 +9,9 @@ export function getModel(backend?: string, model?: string): LanguageModel {
         case undefined:
         case 'ollama':
             return thinkWrap(ollama(model || 'qwen3:0.6b'))
+
+        case 'openai':
+            return openai(model || 'gpt-4.1-nano-2025-04-14')
 
         // unknown backend
         default:
