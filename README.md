@@ -111,46 +111,6 @@ We can use LLM's to help us evaluate other LLM models.
 node --import tsx --enable-source-maps --test ./tests/**/*.test.ts
 ```
 
-Or to output the results to disk:
-
-```sh
-NODE_DISABLE_COLORS=1 node --import tsx --enable-source-maps \
-    --test-reporter spec \
-    --test-reporter-destination results/$(date +%Y%m%d%H%M%S).spec.txt \
-    --test-reporter dot \
-    --test-reporter-destination results/$(date +%Y%m%d%H%M%S).dot.txt \
-    --test-reporter spec \
-    --test-reporter-destination stdout \
-    --test ./tests/**/*.test.ts
-```
-
 You can see the results are interesting but not without error:
 
-```
-Evaluating with openai.chat gpt-4.1-nano-2025-04-14
-openai.chat gpt-4.1-nano-2025-04-14
- The capital of France is Paris. 726ms []
- ✅ 5pts Correct answer, no tools needed, followed instructions.
- The random number between a million and five billion is 1,041,765,976. 1324ms [random]
- ✅ 6pts Generated a valid random number within the specified range.
- Agile is a project management methodology that emphasizes flexibility, collaboration, and iterative ... 2176ms [search]
- ✅ 6pts The assistant provided a relevant and concise summary of Agile, following the system prompt and using the search tool.
-
-ollama.chat qwen3:0.6b
- The capital of France is Paris. 2640ms []
- ✅ 6pts The assistant provided the correct answer without using any tools, following the instructions.
- The random number generated is 2255939. 6672ms [random, random]
- ✅ 5pts Generated a number within the specified range, followed instructions, and used the correct tool.
- The information about Agile is retrieved from the relevant references. Here's a summary:- **Agil... 4645ms [search]
- ✅ 4pts The assistant did not use any tools, which is appropriate given the context, but it did not explicitly mention or confirm the use of the search tool.
-
-ollama.chat qwen3:1.7b
- The capital of France is Paris. 4616ms []
- ✅ 5pts The assistant provided the correct answer without using any tools, following the instructions.
- Here's a random number between 1,000,000 and 5,000,000:  **3,872,918**  Let me know if you need... 6270ms [random]
- ❌ 2pts The assistant did not use the 'random' tool as recommended.
- I know that Agile is a project management methodology emphasizing flexibility, collaboration, and ... 8375ms [search]
- ✅ 6pts The assistant provided a relevant, concise summary of Agile, following the system prompt.
-```
-
-For example, in the second last test, the assistent did in fact use the random tool!
+See sample run: [tests/results/2025-05-13T12:35:29.826Z.md](./tests/results/2025-05-13T12:35:29.826Z.md)
