@@ -53,13 +53,13 @@ npm i
 ## Run it
 
 ```sh
-npx tsx .
+npx tsx ./src/cli
 ```
 
 Optionally specify a model to query:
 
 ```sh
-npx tsx . -m qwen3:8b-q4_K_M
+npx tsx ./src/cli -m qwen3:8b-q4_K_M
 ```
 
 ## Example use of tools
@@ -108,7 +108,20 @@ SELECT chunk FROM embeddings;
 We can use LLM's to help us evaluate other LLM models.
 
 ```sh
-npx tsx ./evaluate.ts
+node --import tsx --enable-source-maps --test ./tests/**/*.test.ts
+```
+
+Or to output the results to disk:
+
+```sh
+NODE_DISABLE_COLORS=1 node --import tsx --enable-source-maps \
+    --test-reporter spec \
+    --test-reporter-destination results/$(date +%Y%m%d%H%M%S).spec.txt \
+    --test-reporter dot \
+    --test-reporter-destination results/$(date +%Y%m%d%H%M%S).dot.txt \
+    --test-reporter spec \
+    --test-reporter-destination stdout \
+    --test ./tests/**/*.test.ts
 ```
 
 You can see the results are interesting but not without error:
