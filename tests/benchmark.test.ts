@@ -32,14 +32,13 @@ test('Benchmark', async (tb: TestContext) => {
 
     await test(model.modelId, async (tc1: TestContext) => {
 
-      results[model.modelId] = {}
-      scores[model.modelId] = 0
+      // log the model
+      log.logModel(debugLogPath, model);
 
       // run each test
+      results[model.modelId] = {}
+      scores[model.modelId] = 0
       for (const [name, t] of Object.entries(TESTS)) {
-
-        // log the model
-        log.logModel(debugLogPath, model);
 
         // begin the test
         await tc1.test(name, async (tc2: TestContext) => {
