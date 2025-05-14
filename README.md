@@ -113,4 +113,4 @@ node --import tsx --enable-source-maps --test ./tests/**/*.test.ts
 
 You can see the results are interesting but not without error:
 
-See sample run: [tests/results/2025-05-13T12:35:29.826Z.md](./tests/results/2025-05-13T12:35:29.826Z.md)
+See sample runs: [tests/results/](./tests/results/)
