@@ -3,6 +3,7 @@ import * as log from './log';
 import { MODELS_TO_EVALUATE } from './models';
 import { Result, run } from './run';
 import { evaluate } from './score/judge';
+import { scoreSpeed } from './score/speed';
 import { scoreToolUsage } from './score/tools';
 import { TESTS } from './tests';
 
@@ -13,11 +14,11 @@ const debugLogPath = log.beginLog();
 const results: { [s: string]: { [s: string]: Result; }; } = {}
 
 // begin
-test('Benchmark', async (tb: TestContext) => {
+test('Benchmark', async (benchmarkCtx: TestContext) => {
 
   // write final scores
   const scores: Map<string, number> = new Map()
-  tb.after(async () => {
+  benchmarkCtx.after(async () => {
 
     const sortedScores = Object.entries(scores)
       .sort((a, b) => b[1] - a[1])
@@ -30,7 +31,7 @@ test('Benchmark', async (tb: TestContext) => {
   // evaluate each model
   for (const model of MODELS_TO_EVALUATE) {
 
-    await test(model.modelId, async (tc1: TestContext) => {
+    await benchmarkCtx.test(model.modelId, async (modelCtx: TestContext) => {
 
       // log the model
       log.logModel(debugLogPath, model);
@@ -41,9 +42,9 @@ test('Benchmark', async (tb: TestContext) => {
       for (const [name, t] of Object.entries(TESTS)) {
 
         // begin the test
-        await tc1.test(name, async (tc2: TestContext) => {
+        await modelCtx.test(name, async (testCtx: TestContext) => {
 
-          const context = `${tc1.name} > ${tc2.name}`
+          const context = `${modelCtx.name} > ${testCtx.name}`
 
           // run the test
           const result = await run(model, t)
@@ -51,27 +52,29 @@ test('Benchmark', async (tb: TestContext) => {
 
           // evaluate the result
           const evalScore = await evaluate(t, result)
-          const toolScore = scoreToolUsage(t, result);
+          const toolScore = scoreToolUsage(t, result)
+          const speedScore = scoreSpeed(t, result)
 
           // assert the response time
-          await tc2.test(`should not be slow`, async () => {
-            tc2.assert.ok(result.duration < 5000, `${context} > response time: ${result.duration}ms`)
+          await testCtx.test(`should not be slow`, async () => {
+            scores[model.modelId] += speedScore
+            testCtx.assert.ok(speedScore > 0, `${context} > response time: ${result.duration} ms`)
           })
 
           // assert the evaluation
-          await tc2.test('should be high quality and concise', async () => {
+          await testCtx.test('should be high quality and concise', async () => {
             scores[model.modelId] += evalScore.points
-            tc2.assert.ok(evalScore.points >= 4, `${context} > ${evalScore.points} points (${evalScore.reason})`)
+            testCtx.assert.ok(evalScore.points >= 4, `${context} > ${evalScore.points} points (${evalScore.reason})`)
           })
 
           // assert the tool usage
-          await tc2.test('should use the tools', async () => {
+          await testCtx.test('should use the tools', async () => {
             scores[model.modelId] -= toolScore.missing.length
-            tc2.assert.ok(toolScore.missing.length == 0, `${context} > missing tools: ${toolScore.missing.join(', ')}`)
+            testCtx.assert.ok(toolScore.missing.length == 0, `${context} > missing tools: ${toolScore.missing.join(', ')}`)
           })
-          await tc2.test('should not use too many tools', async () => {
+          await testCtx.test('should not use too many tools', async () => {
             scores[model.modelId] -= toolScore.extra.length
-            tc2.assert.ok(toolScore.extra.length == 0, `${context} > extra tools: ${toolScore.extra.join(', ')}`)
+            testCtx.assert.ok(toolScore.extra.length == 0, `${context} > extra tools: ${toolScore.extra.join(', ')}`)
           })
 
           // log the result

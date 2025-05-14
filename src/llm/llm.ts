@@ -25,7 +25,7 @@ export function thinkWrap(model: LanguageModel): LanguageModel {
         middleware: extractReasoningMiddleware({
             tagName: 'think',
             separator: '\n\n',
-            startWithReasoning: true,
+            // startWithReasoning: true,
         }),
     })
 }
