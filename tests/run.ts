@@ -37,7 +37,7 @@ export async function run(model: LanguageModel, test: Test): Promise<Result> {
     })
     duration = Date.now() - start
 
-    text = result.text
+    text = result.text.trim()
 
   } catch (e: any) {
     error = e
